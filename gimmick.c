@@ -6,7 +6,7 @@
     #define PRINTF( ... )
 #endif
 
-NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
+NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWORD KeySize )
 {
     PIMAGE_NT_HEADERS NtHeaders = NULL;
     PIMAGE_FILE_HEADER FileHeader = NULL;
@@ -14,8 +14,8 @@ NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
     LPVOID Section = NULL;
 
     // Initialize encryption key
-    Context->EncryptionKey.Length = 16;
-    Context->EncryptionKey.MaximumLength = 16;
+    Context->EncryptionKey.Length = KeySize;
+    Context->EncryptionKey.MaximumLength = KeySize;
     Context->EncryptionKey.Buffer = Key;
 
     // load dependencies
@@ -31,29 +31,14 @@ NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
     WIN_PROC(Context, Kernel32, VirtualFree, HASH_VIRTUALFREE);
     WIN_PROC(Context, Kernel32, WaitForSingleObject, HASH_WAITFORSINGLEOBJECT);
 
-
-    // TODO: Obfuscate as you please----------
-    CHAR AdvApi[] = { 'A', 'D', 'V', 'A', 'P', 'I', '3', '2', '\0'};
-    ANSI_STRING AdvapiAnsi = { .Buffer = AdvApi, .Length = 8, .MaximumLength = 9 };
-    UNICODE_STRING AdvapiUnicode = {};
-    if (Context->RtlAnsiStringToUnicodeString(&AdvapiUnicode, &AdvapiAnsi, TRUE) != STATUS_SUCCESS)
-        return GK_ERROR_USTRING_ALLOC_FAILED;
-    // TODO: ---------------------------------
-
-    // load SystemFunction032
-    Context->LdrLoadDll(NULL, NULL, &AdvapiUnicode, &Context->Advapi32);
-    WIN_PROC(Context, Advapi32, SystemFunction032, HASH_SYSTEMFUNCTION032);
-
 #ifdef DEBUG
     CHAR Msvcrt[] = { 'm', 's', 'v', 'c', 'r', 't', '\0'};
     ANSI_STRING MsvcrtAnsi = { .Buffer = Msvcrt, .Length = 6, .MaximumLength = 7 };
     UNICODE_STRING MsvcrtUnicode = {};
     if (Context->RtlAnsiStringToUnicodeString(&MsvcrtUnicode, &MsvcrtAnsi, TRUE) != STATUS_SUCCESS)
         return GK_ERROR_USTRING_ALLOC_FAILED;
-    int status = Context->LdrLoadDll(NULL, NULL, &MsvcrtUnicode, &Context->Msvcrt);
-    printf("%x %d %d\n", status, Context->Msvcrt, Context->printf);
+    Context->LdrLoadDll(NULL, NULL, &MsvcrtUnicode, &Context->Msvcrt);
     WIN_PROC(Context, Msvcrt, printf, HASH_PRINTF);
-#include <stdio.h>
 #endif
 
 
@@ -140,10 +125,11 @@ NTSTATUS GkGet( PGK_CONTEXT Context, PVOID Data)
                 // rw
                 Context->VirtualProtect(Section->Buffer, Section->Length, PAGE_READWRITE, &SectionContext->OriginalProtect);
                 // decrypt
-                if (Context->SystemFunction032((PBUFFER)SectionContext, &Context->EncryptionKey) != STATUS_SUCCESS) {
-                    return GK_ERROR_CRYPT_FAILED;
-                }
-
+                GkRC4(Context->EncryptionKey.Buffer,
+                    Context->EncryptionKey.Length,
+                    SectionContext->Section.Buffer,
+                    SectionContext->Section.Length,
+                    SectionContext->Section.Buffer);
                 PRINTF("[+][%s] done! releasing mutex and restoring protection.\n", SectionContext->Name);
 
                 // original
@@ -194,9 +180,11 @@ NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
 
                 Context->VirtualProtect(Section->Buffer, Section->Length, PAGE_READWRITE, &SectionContext->OriginalProtect);
                 // encrypt
-                if (Context->SystemFunction032((PBUFFER)SectionContext, &Context->EncryptionKey) != STATUS_SUCCESS) {
-                    return GK_ERROR_CRYPT_FAILED;
-                }
+                GkRC4(Context->EncryptionKey.Buffer,
+                    Context->EncryptionKey.Length,
+                    SectionContext->Section.Buffer,
+                    SectionContext->Section.Length,
+                    SectionContext->Section.Buffer);
                 // original
                 DWORD op; // discard rx
                 Context->VirtualProtect(Section->Buffer, Section->Length, SectionContext->OriginalProtect, &op);
@@ -332,4 +320,51 @@ FARPROC GkGetProcAddress( PGK_CONTEXT Context, HANDLE hModule, DWORD Hash )
         }
     }
     return NULL;
+}
+
+// RC4 implementation - modified https://gist.github.com/rverton/a44fc8ca67ab9ec32089 -----------------
+
+void swap(PUCHAR a, PUCHAR b) {
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+VOID KSA(PUCHAR Key, DWORD KeySize, PUCHAR S) {
+
+    int j = 0;
+
+    for(int i = 0; i < N; i++)
+        S[i] = i;
+
+    for(int i = 0; i < N; i++) {
+        j = (j + S[i] + Key[i % KeySize]) % N;
+
+        swap(&S[i], &S[j]);
+    }
+}
+
+VOID PRGA(PUCHAR S, PUCHAR Plaintext, PUCHAR Ciphertext, DWORD TextSize) {
+
+    int i = 0;
+    int j = 0;
+
+    for(size_t n = 0, len = TextSize; n < len; n++) {
+        i = (i + 1) % N;
+        j = (j + S[i]) % N;
+
+        swap(&S[i], &S[j]);
+        int rnd = S[(S[i] + S[j]) % N];
+
+        Ciphertext[n] = rnd ^ Plaintext[n];
+
+    }
+}
+
+VOID GkRC4(PUCHAR Key, DWORD KeySize, PUCHAR Plaintext, DWORD TextSize, PUCHAR Ciphertext) {
+
+    UCHAR S[N];
+    KSA(Key, KeySize, S);
+
+    PRGA(S, Plaintext, Ciphertext, TextSize);
 }

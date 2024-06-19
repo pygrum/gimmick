@@ -8,7 +8,7 @@ typedef struct {
 
 SEC( rodata ) CHAR hello[] = "hello from gimmick";
 SEC( rodata ) CHAR goodbye[] = "goodbye from gimmick";
-
+SEC( rodata ) CHAR test[] = "test!";
 
 SEC( vmp0 ) DWORD __stdcall Message(PGK_CONTEXT Context, PVOID Args)
 {
@@ -31,7 +31,7 @@ int main()
     GK_CONTEXT Context = {};
     DWORD ThreadId = 0;
     UCHAR Key[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
-    if ((Status = GkInitContext(GkGetModuleHandle(0), &Context, Key)) != STATUS_SUCCESS) {
+    if ((Status = GkInitContext(&Context, GkGetModuleHandle(0), Key, 16)) != STATUS_SUCCESS) {
         return Status;
     }
     greet greetH = { .greeting = hello };

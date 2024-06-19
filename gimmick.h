@@ -20,7 +20,8 @@
 #define GK_ERROR_ADDRESS_SECTION_NOT_FOUND 0x104
 #define GK_ERROR_SECTION_FREE_FAILED 0x105
 
-
+// RC4 Constant
+#define N 256   // 2^8
 /* MODULE HASHES -------------------------------------------------*/
 #define HASH_KERNEL32 0x3bbc195
 #define HASH_NTDLL 0x11c9b04d
@@ -130,8 +131,6 @@ typedef struct _GK_CONTEXT {
     BUFFER EncryptionKey;
     HANDLE Ntdll;
     HANDLE Kernel32;
-    HANDLE Advapi32;
-    HANDLE Msvcrt;
 
     WIN_FUNC( LdrGetProcedureAddressForCaller )
     WIN_FUNC( CreateMutexA )
@@ -139,11 +138,12 @@ typedef struct _GK_CONTEXT {
     WIN_FUNC( VirtualAlloc )
     WIN_FUNC( VirtualProtect )
     WIN_FUNC( VirtualFree )
-    WIN_FUNC( SystemFunction032 )
     WIN_FUNC( LdrLoadDll )
     WIN_FUNC( RtlAnsiStringToUnicodeString )
     WIN_FUNC( WaitForSingleObject )
+
 #ifdef DEBUG
+    HANDLE Msvcrt;
     WIN_FUNC( printf )
 #endif
 
@@ -164,7 +164,7 @@ typedef DWORD (__stdcall *LPGK_ROUTINE) (
 );
 
 // Initialises Gimmick context
-NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key );
+NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWORD KeySize );
 // Frees Gimmick section context that was allocated with GkInitContext
 NTSTATUS GkFreeSectionContext( PGK_CONTEXT Context );
 // Retrieve handle to a module from PEB loader data
@@ -180,6 +180,8 @@ NTSTATUS GkRelease( PGK_CONTEXT Context, HANDLE Data );
 NTSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, PVOID Args, OUT PDWORD ReturnValue );
 // Thread routine to run a function asyncronously. Pass a pointer to the GK_ARGS struct
 DWORD WINAPI GkRunEx( LPVOID Args );
+// Inbuilt RC4
+VOID GkRC4(PUCHAR Key, DWORD KeySize, PUCHAR Plaintext, DWORD TextSize, PUCHAR Ciphertext);
 
 #define SEC( s ) __attribute__( ( section("." #s ) ) )
 
