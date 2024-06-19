@@ -25,7 +25,6 @@ To **encrypt** a section, Gimmick checks for the following conditions:
 
 ## Limitations
 - 64-bit only (for now)
-- Existing 
 - If the executable is to be loaded by the OS, only sections that are untouched by Windows loader can be used to store data. 
 This technique is best used with an rDLL or Shellcode.
 - All sections are marked as encrypted on initialisation, as Gimmick has no awareness of section states before they have been accessed.
