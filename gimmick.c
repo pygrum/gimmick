@@ -4,7 +4,7 @@
 #include <stdio.h>
 #endif
 
-GKSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
+NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
 {
     PIMAGE_NT_HEADERS NtHeaders = NULL;
     PIMAGE_FILE_HEADER FileHeader = NULL;
@@ -80,12 +80,12 @@ GKSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
         // set to next section header
         Section = (CHAR*)Section + sizeof(IMAGE_SECTION_HEADER);
     }
-    return GK_SUCCESS;
+    return STATUS_SUCCESS;
 }
 
-GKSTATUS GkFreeSectionContext( PGK_CONTEXT Context )
+NTSTATUS GkFreeSectionContext( PGK_CONTEXT Context )
 {
-    DWORD status = GK_SUCCESS;
+    DWORD status = STATUS_SUCCESS;
     PGK_SECTION_CONTEXT SectionContext = Context->SectionContexts;
     do
     {
@@ -97,7 +97,7 @@ GKSTATUS GkFreeSectionContext( PGK_CONTEXT Context )
     return status;
 }
 
-GKSTATUS GkGet( PGK_CONTEXT Context, PVOID Data)
+NTSTATUS GkGet( PGK_CONTEXT Context, PVOID Data)
 {
     // find section that data lives in
     PGK_SECTION_CONTEXT SectionContext = NULL;
@@ -149,13 +149,13 @@ GKSTATUS GkGet( PGK_CONTEXT Context, PVOID Data)
             // update before release so that encryptor knows that there's now an accessor
             SectionContext->Accessors += 1;
             Context->ReleaseMutex(SectionContext->Mutex);
-            return GK_SUCCESS;
+            return STATUS_SUCCESS;
         }
     }
     return GK_ERROR_ADDRESS_SECTION_NOT_FOUND;
 }
 
-GKSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
+NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
 {
     // find section that data lives in
     PGK_SECTION_CONTEXT SectionContext = NULL;
@@ -203,7 +203,7 @@ GKSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
     #endif
             // release after notify so that decryptor has the correct encryption bool
             Context->ReleaseMutex(SectionContext->Mutex);
-            return GK_SUCCESS;
+            return STATUS_SUCCESS;
         }
     }
     return GK_ERROR_ADDRESS_SECTION_NOT_FOUND;
@@ -215,14 +215,14 @@ DWORD WINAPI GkRunEx( LPVOID Args )
     return GkRun(GkArgs->Context, GkArgs->Function, GkArgs->Args, &GkArgs->ReturnValue);
 }
 
-GKSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, LPVOID Args, PDWORD ReturnValue )
+NTSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, LPVOID Args, PDWORD ReturnValue )
 {
 
     typedef struct {
         PCHAR greeting;
     } greet, *pgreet;
-    GKSTATUS Status = GK_SUCCESS;
-    if ((Status = GkGet(Context, Function)) != GK_SUCCESS)
+    NTSTATUS Status = STATUS_SUCCESS;
+    if ((Status = GkGet(Context, Function)) != STATUS_SUCCESS)
         return Status;
 
 #ifdef DEBUG
@@ -232,7 +232,7 @@ GKSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, LPVOID Args, PDWORD 
 #ifdef DEBUG
     printf("[*][%p] -- exited with code 0x%.4x\n", Function, *ReturnValue);
 #endif
-    if ((Status = GkRelease(Context, Function)) != GK_SUCCESS)
+    if ((Status = GkRelease(Context, Function)) != STATUS_SUCCESS)
         return Status;
     return Status;
 }

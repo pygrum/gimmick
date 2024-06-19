@@ -13,8 +13,6 @@
 #define WIN_PROC( c, m, f, h ) c->f = (__typeof__(f)*)GkGetProcAddress(c, c->m, h)
 
 
-typedef DWORD GKSTATUS;
-#define GK_SUCCESS 0x0
 #define GK_ERROR_BAD_NT_SIGNATURE 0x100
 #define GK_ERROR_SECTION_CTX_ALLOC_FAILED 0x101
 #define GK_ERROR_USTRING_ALLOC_FAILED 0x102
@@ -159,20 +157,20 @@ typedef DWORD (__stdcall *LPGK_ROUTINE) (
 );
 
 // Initialises Gimmick context
-GKSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key );
+NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key );
 // Frees Gimmick section context that was allocated with GkInitContext
-GKSTATUS GkFreeSectionContext( PGK_CONTEXT Context );
+NTSTATUS GkFreeSectionContext( PGK_CONTEXT Context );
 // Retrieve handle to a module from PEB loader data
 HANDLE GkGetModuleHandle( DWORD Hash );
 // Get process address from loaded module data
 FARPROC GkGetProcAddress( PGK_CONTEXT Context, HANDLE hModule, DWORD Hash );
 // Request data from an encrypted section. Gimmick ensures the section is protected while the data is being used
-GKSTATUS GkGet( PGK_CONTEXT Context, PVOID Data );
+NTSTATUS GkGet( PGK_CONTEXT Context, PVOID Data );
 // Signal that data accessed by GkGet is no longer in use
-GKSTATUS GkRelease( PGK_CONTEXT Context, HANDLE Data );
+NTSTATUS GkRelease( PGK_CONTEXT Context, HANDLE Data );
 // Runs the function with the provided arguments (e.g. a struct pointer) and returns its return value. decrypting the section
 // it exists in if necesssary
-GKSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, PVOID Args, OUT PDWORD ReturnValue );
+NTSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, PVOID Args, OUT PDWORD ReturnValue );
 // Thread routine to run a function asyncronously. Pass a pointer to the GK_ARGS struct
 DWORD WINAPI GkRunEx( LPVOID Args );
 
