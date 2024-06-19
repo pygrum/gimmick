@@ -2,6 +2,7 @@
 #ifndef GIMMICK_H
 #define GIMMICK_H
 
+#include <stdio.h>
 #include "ntdll.h"
 
 #define FORWARDER( ex, s, p ) (DWORD_PTR)p >= (DWORD_PTR)ex && \
@@ -10,8 +11,7 @@
 #define BAD_MODULE( x ) ((PIMAGE_DOS_HEADER)x)->e_magic != IMAGE_DOS_SIGNATURE
 #define TO_LOWERCASE(c) (c = (c <= 'Z' && c >= 'A') ? c + ' ': c)
 #define WIN_FUNC( x ) __typeof__(x)*x;
-#define WIN_PROC( c, m, f, h ) c->f = (__typeof__(f)*)GkGetProcAddress(c, c->m, h)
-
+#define WIN_PROC( c, m, f, h ) c->f = (__typeof__(c->f))GkGetProcAddress(c, c->m, h)
 
 #define GK_ERROR_BAD_NT_SIGNATURE 0x100
 #define GK_ERROR_SECTION_CTX_ALLOC_FAILED 0x101
@@ -35,6 +35,7 @@
 #define HASH_LDRLOADDLL 0x23a21f83
 #define HASH_SYSTEMFUNCTION032 0xd3a21dc5
 #define HASH_WAITFORSINGLEOBJECT 0xda18e23a
+#define HASH_PRINTF 0x156b2bb8
 
 
 #ifndef HASH
@@ -130,6 +131,8 @@ typedef struct _GK_CONTEXT {
     HANDLE Ntdll;
     HANDLE Kernel32;
     HANDLE Advapi32;
+    HANDLE Msvcrt;
+
     WIN_FUNC( LdrGetProcedureAddressForCaller )
     WIN_FUNC( CreateMutexA )
     WIN_FUNC( ReleaseMutex )
@@ -140,6 +143,10 @@ typedef struct _GK_CONTEXT {
     WIN_FUNC( LdrLoadDll )
     WIN_FUNC( RtlAnsiStringToUnicodeString )
     WIN_FUNC( WaitForSingleObject )
+#ifdef DEBUG
+    WIN_FUNC( printf )
+#endif
+
 } GK_CONTEXT, *PGK_CONTEXT;
 
 // Used to pass information to the GkRunner thread.

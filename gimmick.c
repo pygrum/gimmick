@@ -1,7 +1,9 @@
 #include "gimmick.h"
 
 #ifdef DEBUG
-#include <stdio.h>
+    #define PRINTF( ... )  Context->printf( __VA_ARGS__ );
+#else
+    #define PRINTF( ... )
 #endif
 
 NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
@@ -36,10 +38,23 @@ NTSTATUS GkInitContext( LPVOID BaseAddress, PGK_CONTEXT Context, PUCHAR Key )
     UNICODE_STRING AdvapiUnicode = {};
     if (Context->RtlAnsiStringToUnicodeString(&AdvapiUnicode, &AdvapiAnsi, TRUE) != STATUS_SUCCESS)
         return GK_ERROR_USTRING_ALLOC_FAILED;
-    // ---------------------------------------
+    // TODO: ---------------------------------
+
     // load SystemFunction032
     Context->LdrLoadDll(NULL, NULL, &AdvapiUnicode, &Context->Advapi32);
     WIN_PROC(Context, Advapi32, SystemFunction032, HASH_SYSTEMFUNCTION032);
+
+#ifdef DEBUG
+    CHAR Msvcrt[] = { 'm', 's', 'v', 'c', 'r', 't', '\0'};
+    ANSI_STRING MsvcrtAnsi = { .Buffer = Msvcrt, .Length = 6, .MaximumLength = 7 };
+    UNICODE_STRING MsvcrtUnicode = {};
+    if (Context->RtlAnsiStringToUnicodeString(&MsvcrtUnicode, &MsvcrtAnsi, TRUE) != STATUS_SUCCESS)
+        return GK_ERROR_USTRING_ALLOC_FAILED;
+    int status = Context->LdrLoadDll(NULL, NULL, &MsvcrtUnicode, &Context->Msvcrt);
+    printf("%x %d %d\n", status, Context->Msvcrt, Context->printf);
+    WIN_PROC(Context, Msvcrt, printf, HASH_PRINTF);
+#include <stdio.h>
+#endif
 
 
     NtHeaders = (PIMAGE_NT_HEADERS)((CHAR*)BaseAddress + ((PIMAGE_DOS_HEADER)BaseAddress)->e_lfanew);
@@ -116,36 +131,32 @@ NTSTATUS GkGet( PGK_CONTEXT Context, PVOID Data)
              * 4. Update encryption status
              * 5. Release mutex
              */
-#ifdef DEBUG
-            printf("[*][%s] attempting to decrypt section\n", SectionContext->Name);
-#endif
+
+            PRINTF("[*][%s] attempting to decrypt section\n", SectionContext->Name);
             if (SectionContext->Encrypted) {
-#ifdef DEBUG
-                printf("[*][%s] decrypting section\n", SectionContext->Name);
-#endif
+
+                PRINTF("[*][%s] decrypting section\n", SectionContext->Name);
+
                 // rw
                 Context->VirtualProtect(Section->Buffer, Section->Length, PAGE_READWRITE, &SectionContext->OriginalProtect);
                 // decrypt
                 if (Context->SystemFunction032((PBUFFER)SectionContext, &Context->EncryptionKey) != STATUS_SUCCESS) {
                     return GK_ERROR_CRYPT_FAILED;
                 }
-#ifdef DEBUG
-                printf("[+][%s] done! releasing mutex and restoring protection.\n", SectionContext->Name);
-#endif
+
+                PRINTF("[+][%s] done! releasing mutex and restoring protection.\n", SectionContext->Name);
+
                 // original
                 DWORD op;
                 Context->VirtualProtect(Section->Buffer, Section->Length, SectionContext->OriginalProtect, &op);
                 // notify
                 SectionContext->Encrypted = FALSE;
-#ifdef DEBUG
-                printf("[+][%s] data is now available for use.\n", SectionContext->Name);
-#endif
+                PRINTF("[+][%s] data is now available for use.\n", SectionContext->Name);
             }
-#ifdef DEBUG
             else {
-                printf("[!][%s] section is already decrypted\n", SectionContext->Name);
+                PRINTF("[!][%s] section is already decrypted\n", SectionContext->Name);
             }
-#endif
+
             // update before release so that encryptor knows that there's now an accessor
             SectionContext->Accessors += 1;
             Context->ReleaseMutex(SectionContext->Mutex);
@@ -167,9 +178,8 @@ NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
             // acquire before checking accessors, effectively wait for an accessor to register themselves
             Context->WaitForSingleObject(SectionContext->Mutex, INFINITE);
             SectionContext->Accessors -= 1; // decrement before acquiry in case another thread acquires and checks for accessors before us
-#ifdef DEBUG
-            printf("[*][%s] attempting to re-encrypt section\n", SectionContext->Name);
-#endif
+
+            PRINTF("[*][%s] attempting to re-encrypt section\n", SectionContext->Name);
             if (!SectionContext->Accessors) {
                 /*
                  * 1. Acquire mutex
@@ -179,9 +189,9 @@ NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
                  * 5. Update encryption status
                  */
                 // rw
-#ifdef DEBUG
-            printf("[*][%s] re-encrypting section\n", SectionContext->Name);
-#endif
+
+            PRINTF("[*][%s] re-encrypting section\n", SectionContext->Name);
+
                 Context->VirtualProtect(Section->Buffer, Section->Length, PAGE_READWRITE, &SectionContext->OriginalProtect);
                 // encrypt
                 if (Context->SystemFunction032((PBUFFER)SectionContext, &Context->EncryptionKey) != STATUS_SUCCESS) {
@@ -192,15 +202,12 @@ NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
                 Context->VirtualProtect(Section->Buffer, Section->Length, SectionContext->OriginalProtect, &op);
                 // notify
                 SectionContext->Encrypted = TRUE;
-    #ifdef DEBUG
-                printf("[+][%s] successfully re-encrypted section\n", SectionContext->Name);
-    #endif
+
+                PRINTF("[+][%s] successfully re-encrypted section\n", SectionContext->Name);
             }
-    #ifdef DEBUG
             else {
-                printf("[!][%s] section is in use - no re-encryption was performed\n", SectionContext->Name);
+                PRINTF("[!][%s] section is in use - no re-encryption was performed\n", SectionContext->Name);
             }
-    #endif
             // release after notify so that decryptor has the correct encryption bool
             Context->ReleaseMutex(SectionContext->Mutex);
             return STATUS_SUCCESS;
@@ -225,13 +232,13 @@ NTSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, LPVOID Args, PDWORD 
     if ((Status = GkGet(Context, Function)) != STATUS_SUCCESS)
         return Status;
 
-#ifdef DEBUG
-    printf("[*][%p] -- executing callee function\n", Function);
-#endif
+
+    PRINTF("[*][%p] -- executing callee function\n", Function);
+
     *ReturnValue = Function(Context, Args);
-#ifdef DEBUG
-    printf("[*][%p] -- exited with code 0x%.4x\n", Function, *ReturnValue);
-#endif
+
+    PRINTF("[*][%p] -- exited with code 0x%.4x\n", Function, *ReturnValue);
+
     if ((Status = GkRelease(Context, Function)) != STATUS_SUCCESS)
         return Status;
     return Status;

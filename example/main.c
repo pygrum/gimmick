@@ -1,9 +1,5 @@
 #include "../gimmick.h"
 
-#ifdef DEBUG
-#include <stdio.h>
-#endif
-
 typedef struct {
     PCHAR greeting;
 } greet, *pgreet;
