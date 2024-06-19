@@ -13,12 +13,8 @@
 #define WIN_FUNC( x ) __typeof__(x)*x;
 #define WIN_PROC( c, m, f, h ) c->f = (__typeof__(c->f))GkGetProcAddress(c, c->m, h)
 
-#define GK_ERROR_BAD_NT_SIGNATURE 0x100
-#define GK_ERROR_SECTION_CTX_ALLOC_FAILED 0x101
-#define GK_ERROR_USTRING_ALLOC_FAILED 0x102
-#define GK_ERROR_CRYPT_FAILED 0x103
-#define GK_ERROR_ADDRESS_SECTION_NOT_FOUND 0x104
-#define GK_ERROR_SECTION_FREE_FAILED 0x105
+#define STATUS_INVALID_SIGNATURE 0xC000A000
+#define STATUS_SECTION_NOT_IMAGE 0xC0000049
 
 // RC4 Constant
 #define N 256   // 2^8

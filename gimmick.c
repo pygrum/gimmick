@@ -1,5 +1,5 @@
 #include "gimmick.h"
-
+#include <windows.h>
 #ifdef DEBUG
     #define PRINTF( ... )  Context->printf( __VA_ARGS__ );
 #else
@@ -36,7 +36,7 @@ NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWO
     ANSI_STRING MsvcrtAnsi = { .Buffer = Msvcrt, .Length = 6, .MaximumLength = 7 };
     UNICODE_STRING MsvcrtUnicode = {};
     if (Context->RtlAnsiStringToUnicodeString(&MsvcrtUnicode, &MsvcrtAnsi, TRUE) != STATUS_SUCCESS)
-        return GK_ERROR_USTRING_ALLOC_FAILED;
+        return STATUS_UNSUCCESSFUL;
     Context->LdrLoadDll(NULL, NULL, &MsvcrtUnicode, &Context->Msvcrt);
     WIN_PROC(Context, Msvcrt, printf, HASH_PRINTF);
 #endif
@@ -44,7 +44,7 @@ NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWO
 
     NtHeaders = (PIMAGE_NT_HEADERS)((CHAR*)BaseAddress + ((PIMAGE_DOS_HEADER)BaseAddress)->e_lfanew);
     if (NtHeaders->Signature != IMAGE_NT_SIGNATURE)
-        return GK_ERROR_BAD_NT_SIGNATURE;
+        return STATUS_INVALID_SIGNATURE;
 
     FileHeader = &NtHeaders->FileHeader;
     // get first section
@@ -61,7 +61,7 @@ NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWO
             PAGE_READWRITE
             );
         if (SectionContext == NULL) {
-            return GK_ERROR_SECTION_CTX_ALLOC_FAILED;
+            return STATUS_UNSUCCESSFUL;
         }
         SectionContext->Section.Buffer = (PUCHAR)BaseAddress + SectionHeader->VirtualAddress; // assumes sections are loaded correctly in memory
         SectionContext->Section.Length = SectionHeader->Misc.VirtualSize;
@@ -91,7 +91,7 @@ NTSTATUS GkFreeSectionContext( PGK_CONTEXT Context )
     {
         PGK_SECTION_CONTEXT Next = SectionContext->Next;
         if (!Context->VirtualFree(SectionContext, 0, MEM_RELEASE))
-            status = GK_ERROR_SECTION_FREE_FAILED;
+            status = STATUS_UNSUCCESSFUL;
         SectionContext = Next;
     } while (SectionContext != NULL);
     return status;
@@ -149,7 +149,7 @@ NTSTATUS GkGet( PGK_CONTEXT Context, PVOID Data)
             return STATUS_SUCCESS;
         }
     }
-    return GK_ERROR_ADDRESS_SECTION_NOT_FOUND;
+    return STATUS_SECTION_NOT_IMAGE;
 }
 
 NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
@@ -201,7 +201,7 @@ NTSTATUS GkRelease( PGK_CONTEXT Context, PVOID Data )
             return STATUS_SUCCESS;
         }
     }
-    return GK_ERROR_ADDRESS_SECTION_NOT_FOUND;
+    return STATUS_SECTION_NOT_IMAGE;
 }
 
 DWORD WINAPI GkRunEx( LPVOID Args )
