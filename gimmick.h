@@ -83,13 +83,6 @@ typedef struct _BUFFER {
 
 
 // unexported win32 functions and symbols--------------------------------
-NTSTATUS
-SystemFunction032
-(
-    PBUFFER data,
-    PBUFFER key
-);
-
 NTSYSAPI
 NTSTATUS
 NTAPI
