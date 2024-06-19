@@ -108,9 +108,9 @@ typedef struct _GK_SECTION_CONTEXT {
     BUFFER Section;
     DWORD OriginalProtect;
     PCHAR Name;
-    DWORD Accessors;
+    DWORD Accessors; // section reference count, used to check for accessors before re-encryption
     HANDLE Mutex; // held during encryption and decryption.
-    BOOL Encrypted; // changed BEFORE crypt is done
+    BOOL Encrypted;
     struct _GK_SECTION_CONTEXT* Next;
 } GK_SECTION_CONTEXT, *PGK_SECTION_CONTEXT;
 
