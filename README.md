@@ -79,8 +79,7 @@ An example multithreaded application is set up for POC purposes. It is compiled 
 
 ## Usage
 NOTE: This project is a Proof of Concept. It will likely be buggy, and I do NOT recommend using it as-is in production. 
-Bugs will be fixed as they are encountered. You may open a PR to fix existing issues,
-or simply fix these yourself privately.
+You may open a PR to fix existing issues, or simply fix these yourself privately.
 
 1. Add `gimmick.c`, `gimmick.h` and `ntdll.h` to your project
 2. Assign objects to desired sections with the `SEC` macro, separating different types (e.g. functions and variables)
