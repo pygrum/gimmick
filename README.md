@@ -19,13 +19,13 @@ To **encrypt** a section, Gimmick checks for the following conditions:
 
 ## Extra features
 
-- PIC (Position Independent Code) compatible library, with custom GetModuleHandle and GetProcAddress implementations
+- PIC (Position Independent Code) friendly, with custom GetModuleHandle and GetProcAddress implementations
 - Dynamically loaded functions and modules that can be passed to a global instance at runtime.
 - Inbuilt RC4 implementation
 
 ## Limitations
 - 64-bit only (for now)
-- Sections used by stdlib cannot be encrypted. Modify and compile with -nostdlib to have more standard section names available for use
+- Existing 
 - If the executable is to be loaded by the OS, only sections that are untouched by Windows loader can be used to store data. 
 This technique is best used with an rDLL or Shellcode.
 - All sections are marked as encrypted on initialisation, as Gimmick has no awareness of section states before they have been accessed.
@@ -36,46 +36,65 @@ macro should be called, provided that the section will also be encrypted with `c
 
 ## Run
 An example multithreaded application is set up for POC purposes. It is compiled with MinGW gcc.
-1. `make build`
+1. `make build` or `make release`
 2. `./gimmick.exe`
 
 ### Output
 ```
 --- Starting threads
-[*][.vmp0] attempting to decrypt section
-[*][.vmp0] decrypting section
-[+][.vmp0] done! releasing mutex and restoring protection.
-[+][.vmp0] data is now available for use.
-[*][00007ff6963e9000] -- executing callee function
+[*][.xdata] attempting to decrypt section
+[*][.xdata] decrypting section
+[+][.xdata] done! releasing mutex and restoring protection.
+[+][.xdata] data is now available for use.
+[*][00007FF6EAE64000] -- executing callee function
 [*][.rodata] attempting to decrypt section
 [*][.rodata] decrypting section
-[*][.vmp0] attempting to decrypt section
-[!][.vmp0] section is already decrypted
-[*][00007ff6963e9000] -- executing callee function
+[*][.xdata] attempting to decrypt section
+[!][.xdata] section is already decrypted
+[*][00007FF6EAE64000] -- executing callee function
 [+][.rodata] done! releasing mutex and restoring protection.
 [+][.rodata] data is now available for use.
 [*][.rodata] attempting to decrypt section
 [!][.rodata] section is already decrypted
+[*][.rodata] attempting to decrypt section
+[!][.rodata] section is already decrypted
+[*][.rodata] attempting to decrypt section
+[!][.rodata] section is already decrypted
 [*][.rodata] attempting to re-encrypt section
 [!][.rodata] section is in use - no re-encryption was performed
-[*][00007ff6963e9000] -- exited with code 0xdead
-[*][.vmp0] attempting to re-encrypt section
-[!][.vmp0] section is in use - no re-encryption was performed
+[*][.rodata] attempting to re-encrypt section
+[!][.rodata] section is in use - no re-encryption was performed
+[*][00007FF6EAE64000] -- exited with code 0xdead
+[*][.xdata] attempting to re-encrypt section
+[!][.xdata] section is in use - no re-encryption was performed
+[*][.rodata] attempting to re-encrypt section
+[!][.rodata] section is in use - no re-encryption was performed
 [*][.rodata] attempting to re-encrypt section
 [*][.rodata] re-encrypting section
 [+][.rodata] successfully re-encrypted section
-[*][00007ff6963e9000] -- exited with code 0xdead
-[*][.vmp0] attempting to re-encrypt section
-[*][.vmp0] re-encrypting section
-[+][.vmp0] successfully re-encrypted section
+[*][00007FF6EAE64000] -- exited with code 0xdead
+[*][.xdata] attempting to re-encrypt section
+[*][.xdata] re-encrypting section
+[+][.xdata] successfully re-encrypted section
 ```
 
 ## Usage
+NOTE: This project is a Proof of Concept. It will likely be buggy, and I do NOT recommend using it as-is in production. 
+Bugs will be fixed as they are encountered. You may open a PR to fix existing issues,
+or simply fix these yourself privately.
+
 1. Add `gimmick.c`, `gimmick.h` and `ntdll.h` to your project
 2. Assign objects to desired sections with the `SEC` macro, separating different types (e.g. functions and variables)
 3. Initialise Gimmick context with `GkInitContext`, and free with `GkFreeSectionContext`
 4. Use `GkGet` (+`GkRelease`), `GkRun`, or `GkRunEx` to run functions or access variables assigned to encrypted sections
-5. Compile the file
+5. Compile the file with -Os and other desired flags
 6. Choose sections that contain data accessed with Gimmick to encrypt (`crypt.py`) and encrypt them with the same key used
 for Gimmick's context (edit in script)
 7. Run your executable
+
+## Disclaimer
+This code is provided for educational and ethical
+purposes only. The authors and contributors are not responsible for any
+misuse of the code, including but not limited to the unlawful creation or
+distribution of malware. Use this code responsibly and in accordance
+with all applicable laws and regulations.

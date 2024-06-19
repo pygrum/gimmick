@@ -30,6 +30,7 @@ NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWO
     WIN_PROC(Context, Kernel32, VirtualProtect, HASH_VIRTUALPROTECT);
     WIN_PROC(Context, Kernel32, VirtualFree, HASH_VIRTUALFREE);
     WIN_PROC(Context, Kernel32, WaitForSingleObject, HASH_WAITFORSINGLEOBJECT);
+    WIN_PROC(Context, Kernel32, CreateThread, HASH_CREATETHREAD);
 
 #ifdef DEBUG
     CHAR Msvcrt[] = { 'm', 's', 'v', 'c', 'r', 't', '\0'};
@@ -37,7 +38,7 @@ NTSTATUS GkInitContext( PGK_CONTEXT Context, LPVOID BaseAddress, PUCHAR Key, DWO
     UNICODE_STRING MsvcrtUnicode = {};
     if (Context->RtlAnsiStringToUnicodeString(&MsvcrtUnicode, &MsvcrtAnsi, TRUE) != STATUS_SUCCESS)
         return STATUS_UNSUCCESSFUL;
-    Context->LdrLoadDll(NULL, NULL, &MsvcrtUnicode, &Context->Msvcrt);
+    Context->LdrLoadDll(NULL, 0, &MsvcrtUnicode, &Context->Msvcrt);
     WIN_PROC(Context, Msvcrt, printf, HASH_PRINTF);
 #endif
 

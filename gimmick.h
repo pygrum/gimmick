@@ -33,6 +33,7 @@
 #define HASH_SYSTEMFUNCTION032 0xd3a21dc5
 #define HASH_WAITFORSINGLEOBJECT 0xda18e23a
 #define HASH_PRINTF 0x156b2bb8
+#define HASH_CREATETHREAD 0xe819b491
 
 
 #ifndef HASH
@@ -137,6 +138,7 @@ typedef struct _GK_CONTEXT {
     WIN_FUNC( LdrLoadDll )
     WIN_FUNC( RtlAnsiStringToUnicodeString )
     WIN_FUNC( WaitForSingleObject )
+    WIN_FUNC( CreateThread )
 
 #ifdef DEBUG
     HANDLE Msvcrt;

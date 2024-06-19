@@ -8,24 +8,39 @@ typedef struct {
 
 SEC( rodata ) CHAR hello[] = "hello from gimmick";
 SEC( rodata ) CHAR goodbye[] = "goodbye from gimmick";
-SEC( rodata ) CHAR test[] = "test!";
+SEC( rodata ) CHAR user32[] = "user32";
 
-SEC( vmp0 ) DWORD __stdcall Message(PGK_CONTEXT Context, PVOID Args)
+SEC( xdata ) DWORD __stdcall Message(PGK_CONTEXT Context, PVOID Args)
 {
     pgreet greet = Args;
     PCHAR greeting = greet->greeting;
 
     // get encrypted data
     GkGet( Context, greeting );
+    GkGet( Context, user32 );
 
-    MessageBoxA(NULL, greeting, NULL, 0);
+    UNICODE_STRING User32 = {};
+    ANSI_STRING User32Ansi = { .Buffer = user32, .Length = 6, .MaximumLength = 7 };
+    Context->RtlAnsiStringToUnicodeString(&User32, &User32Ansi, TRUE);
+
+    DWORD hashMessageBoxA = 0xe3f74914;
+    HANDLE hUser32 = NULL;
+    Context->LdrLoadDll(NULL, 0, &User32, &hUser32);
+    __typeof__(MessageBoxA)* MessageBoxAProc = (__typeof__(MessageBoxA)*)GkGetProcAddress(Context, hUser32, hashMessageBoxA);
+    MessageBoxAProc(NULL, greeting, NULL, 0);
 
     // release data
+    GkRelease( Context, user32 );
     GkRelease( Context, greeting );
     return 0xDEAD;
 }
 
-int main()
+int WINAPI WinMain(
+ IN HINSTANCE hInstance,
+ IN OPTIONAL HINSTANCE hPrevInstance,
+ IN LPSTR lpCmdLine,
+ IN int nShowCmd
+)
 {
     NTSTATUS Status = STATUS_SUCCESS;
     GK_CONTEXT Context = {};
@@ -40,15 +55,14 @@ int main()
     // gkrun arguments
     GK_ARGS ArgsHello = { .Context = &Context, .Function = Message, .Args = &greetH };
     GK_ARGS ArgsGoodbye = { .Context = &Context, .Function = Message, .Args = &greetG };
-
 #ifdef DEBUG
-    printf("--- Starting threads\n");
+    Context.printf("--- Starting threads\n");
 #endif
-    HANDLE ThreadH = CreateThread(NULL, 0, GkRunEx, &ArgsHello, 0, &ThreadId);
-    HANDLE ThreadG = CreateThread(NULL, 0, GkRunEx, &ArgsGoodbye, 0, &ThreadId);
+    HANDLE ThreadH = Context.CreateThread(NULL, 0, GkRunEx, &ArgsHello, 0, &ThreadId);
+    HANDLE ThreadG = Context.CreateThread(NULL, 0, GkRunEx, &ArgsGoodbye, 0, &ThreadId);
 
-    WaitForSingleObject(ThreadH, INFINITE);
-    WaitForSingleObject(ThreadG, INFINITE);
+    Context.WaitForSingleObject(ThreadH, INFINITE);
+    Context.WaitForSingleObject(ThreadG, INFINITE);
 
     return GkFreeSectionContext(&Context);
 }
