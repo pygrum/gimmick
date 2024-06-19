@@ -139,7 +139,7 @@ typedef struct _GK_CONTEXT {
 
 } GK_CONTEXT, *PGK_CONTEXT;
 
-// Used to pass information to the GkRunner thread.
+// Used to pass information to a GkRunEx thread.
 typedef struct _GK_ARGS {
     PGK_CONTEXT Context;
     LPVOID Function;
