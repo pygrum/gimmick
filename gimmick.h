@@ -99,7 +99,6 @@ LdrGetProcedureAddressForCaller(
 
 /*
  * stores section context for syncronisation.
- * Implements buffer used for RC4 encryption by SystemFunction032.
  * 1. Allow access when section is unencrypted
  * 2. Do not encrypt if there are other threads accessing the section
  * 3. Do not access while a section is being encrypted or decrypted (mutex is used for insurance)
