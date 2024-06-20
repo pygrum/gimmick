@@ -213,10 +213,6 @@ DWORD WINAPI GkRunEx( LPVOID Args )
 
 NTSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, LPVOID Args, PDWORD ReturnValue )
 {
-
-    typedef struct {
-        PCHAR greeting;
-    } greet, *pgreet;
     NTSTATUS Status = STATUS_SUCCESS;
     if ((Status = GkGet(Context, Function)) != STATUS_SUCCESS)
         return Status;
