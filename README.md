@@ -31,7 +31,7 @@ This technique is best used with an rDLL or Shellcode.
 It will attempt to encrypt / decrypt any section referenced by the API. Only functions and variables designated a section with the `SEC`
 macro should be called, provided that the section will also be encrypted with `crypt.py` after. This really shouldn't be an issue 
 **provided that you only target the sections that you want to encrypt.**
-- For sections containing executable code, there will
+- Section page protections are flipped to RW briefly during encryption and decryption.
 
 ## Run
 An example multithreaded application is set up for POC purposes. It is compiled with MinGW gcc.
