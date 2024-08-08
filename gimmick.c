@@ -229,7 +229,7 @@ NTSTATUS GkRun( PGK_CONTEXT Context, LPGK_ROUTINE Function, LPVOID Args, PDWORD 
     return Status;
 }
 
-SIZE_T StrLenA(PCHAR String )
+SIZE_T __attribute__((optimize("O0"))) StrLenA(PCHAR String )
 {
     SIZE_T length = 0;
     while (*String++) {
